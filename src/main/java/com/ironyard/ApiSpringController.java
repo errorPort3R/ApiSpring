@@ -1,12 +1,16 @@
 package com.ironyard;
 
+import org.springframework.scheduling.annotation.Async;
+import org.springframework.scheduling.annotation.AsyncResult;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.client.RestTemplate;
 
 import javax.annotation.PostConstruct;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.concurrent.Future;
 
 /**
  * Created by jeffryporter on 7/25/16.
@@ -43,10 +47,8 @@ public class ApiSpringController
         t.start();
     }
 
-
-    //https://github.com/Book-It/BookIt
-    @RequestMapping (path ="/quote", method = RequestMethod.GET)
-    public HashMap getQuote()
+    @Async
+    public Future<HashMap> requestQuote()
     {
         RestTemplate query = new RestTemplate();
         HashMap result = query.getForObject(API_URL, HashMap.class);
@@ -55,8 +57,29 @@ public class ApiSpringController
         if(type.equals("success"))
         {
             HashMap value = (HashMap) result.get("value");
-            return value;
+            return new AsyncResult<>(value);
         }
-        return null;
+        return new AsyncResult<>(null);
     }
+
+
+    //https://github.com/Book-It/BookIt
+    @RequestMapping (path ="/quote", method = RequestMethod.GET)
+    public ArrayList getQuote() throws InterruptedException
+    {
+        Future<HashMap> quote1 = requestQuote();
+        Future<HashMap> quote2 = requestQuote();
+        Future<HashMap> quote3 = requestQuote();
+
+        while (!quote1.isDone() || !quote2.isDone() || !quote3.isDone())
+        {
+            Thread.sleep(100);
+        }
+        ArrayList arr = new ArrayList();
+        arr.add(quote1);
+        arr.add(quote2);
+        arr.add(quote3);
+        return arr;
+    }
+
 }
